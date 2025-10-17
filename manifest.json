@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "THU Auto Login",
+  "version": "1.0",
+  "description": "Automatically logs into the THU website.",
+  "content_scripts": [
+    {
+      "matches": ["*://id.tsinghua.edu.cn/*"],
+      "js": ["content_script.js"]
+    }
+  ]
+}
