@@ -1,23 +1,29 @@
-function getEl(id) { return document.getElementById(id); }
+function $(id) { return document.getElementById(id); }
 
 
 async function restore() {
     const { thuLogin } = await chrome.storage.sync.get('thuLogin');
-    const cfg = Object.assign({ username: '', password: '', autoSubmit: true, delayMs: 400 }, thuLogin || {});
-    getEl('username').value = cfg.username;
-    getEl('password').value = cfg.password;
-    getEl('autoSubmit').checked = !!cfg.autoSubmit;
-    getEl('delayMs').value = cfg.delayMs;
+    const cfg = Object.assign({ username: '', password: '', autoSubmit: true }, thuLogin || {});
+    const u = $('username');
+    const p = $('password');
+    const a = $('autoSubmit');
+    if (u) u.value = cfg.username;
+    if (p) p.value = cfg.password;
+    if (a) a.checked = !!cfg.autoSubmit;
 }
 
 
 async function save(e) {
     e.preventDefault();
+    const u = $('username');
+    const p = $('password');
+    const a = $('autoSubmit');
+    // Guard for missing elements
+    if (!u || !p || !a) { alert('Options page is missing fields.'); return; }
     const data = {
-        username: getEl('username').value.trim(),
-        password: getEl('password').value,
-        autoSubmit: getEl('autoSubmit').checked,
-        delayMs: Math.max(0, Number(getEl('delayMs').value || 0))
+        username: (u.value || '').trim(),
+        password: p.value || '',
+        autoSubmit: !!a.checked,
     };
     await chrome.storage.sync.set({ thuLogin: data });
     alert('Saved.');
@@ -31,6 +37,10 @@ async function clearAll() {
 }
 
 
-document.addEventListener('DOMContentLoaded', restore);
-getEl('form').addEventListener('submit', save);
-getEl('clear').addEventListener('click', clearAll);
+document.addEventListener('DOMContentLoaded', () => {
+    restore().catch(console.error);
+    const form = document.getElementById('form');
+    const clearBtn = document.getElementById('clear');
+    if (form) form.addEventListener('submit', (e) => save(e).catch(console.error));
+    if (clearBtn) clearBtn.addEventListener('click', () => clearAll().catch(console.error));
+});

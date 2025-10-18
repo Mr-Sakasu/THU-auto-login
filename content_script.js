@@ -1,62 +1,32 @@
-// content_script.js
+// Minimal auto-fill + optional submit.
+// Assumes fields are present at load; no observers, no delays.
 (() => {
-    // STEP 1 — press "登录" on Web Learning page
-    if (location.href.startsWith("https://learn.tsinghua.edu.cn/f/login")) {
-        const press = () => {
-            const btn = document.getElementById("loginButtonId");
-            if (btn) { btn.click(); return true; }
-            // Fallback: same target as the button's onclick
-            location.href = "https://id.tsinghua.edu.cn/do/off/ui/auth/login/form/bb5df85216504820be7bba2b0ae1535b/0";
-            return true;
-        };
+    chrome.storage.sync.get('thuLogin').then(({ thuLogin }) => {
+        if (!thuLogin) return;
+        const { username = '', password = '', autoSubmit = true } = thuLogin;
+        if (!username || !password) return;
 
-        if (!press()) {
-            let elapsed = 0;
-            const iv = setInterval(() => {
-                if (press() || (elapsed += 100) > 3000) clearInterval(iv);
-            }, 100);
+
+        // Very small set of selectors — tweak for THU DOM if needed
+        const user = document.querySelector('#username, input[name="username"], input[id*="user" i]');
+        const pass = document.querySelector('input[type="password"], input[name="password"], input[id*="pass" i]');
+        if (!user || !pass) return;
+
+
+        user.value = username;
+        pass.value = password;
+
+
+        // Light event dispatch so frameworks notice
+        user.dispatchEvent(new Event('input', { bubbles: true }));
+        pass.dispatchEvent(new Event('input', { bubbles: true }));
+
+
+        if (autoSubmit) {
+            const form = pass.form || user.form || document.querySelector('form');
+            const btn = form?.querySelector('button[type="submit"], input[type="submit"]');
+            if (btn) btn.click();
+            else form?.submit?.();
         }
-        return;
-    }
-
-    // STEP 2 — fill SSO (id.tsinghua.edu.cn) with #i_user / #i_pass and submit
-    if (location.hostname === "id.tsinghua.edu.cn") {
-        chrome.storage.sync.get("thuLogin").then(({ thuLogin }) => {
-            if (!thuLogin) return;
-            const { username = "", password = "", autoSubmit = true } = thuLogin;
-            if (!username || !password) return;
-
-            const user = document.getElementById("i_user");
-            const pass = document.getElementById("i_pass");
-            if (!user || !pass) return;
-
-            // Fill
-            user.value = username;
-            pass.value = password;
-
-            // Let any JS listeners know
-            user.dispatchEvent(new Event("input", { bubbles: true }));
-            pass.dispatchEvent(new Event("input", { bubbles: true }));
-            user.dispatchEvent(new Event("change", { bubbles: true }));
-            pass.dispatchEvent(new Event("change", { bubbles: true }));
-
-            if (autoSubmit) {
-                // Prefer clicking a visible login-like control
-                const candidates = Array.from(document.querySelectorAll(
-                    'button, input[type="submit"], input[type="button"], a, [role="button"]'
-                ));
-                const loginBtn = candidates.find(el =>
-                    /登录|登陆|sign\s*in|log\s*in/i.test((el.textContent || el.value || "").trim())
-                );
-
-                if (loginBtn) {
-                    loginBtn.click();
-                } else {
-                    // fallback to form submit
-                    const form = pass.form || user.form || document.querySelector("form");
-                    form?.submit?.();
-                }
-            }
-        });
-    }
+    });
 })();
