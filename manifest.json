@@ -1,14 +1,19 @@
 {
   "manifest_version": 3,
   "name": "THU Auto Login",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "permissions": [
     "storage"
+  ],
+  "host_permissions": [
+    "https://learn.tsinghua.edu.cn/*",
+    "https://id.tsinghua.edu.cn/*"
   ],
   "content_scripts": [
     {
       "matches": [
         "https://learn.tsinghua.edu.cn/f/login",
+        "https://learn.tsinghua.edu.cn/f/wlxt/index/course/student*",
         "https://id.tsinghua.edu.cn/*"
       ],
       "js": [
