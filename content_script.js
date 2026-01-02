@@ -1,47 +1,102 @@
-// Minimal auto-fill + optional submit.
-// Assumes fields are present at load; no observers, no delays.
 (() => {
-    if (location.pathname.startsWith("/f/login")){
-        const a = "load successfully";
-        console.log(a);
-        const clickLogin = () => {
-            const btn = document.getElementById("loginButtonId");
-            if (btn) {
-                btn.click();
-                console.log("click login button");
-            } else {
-                console.log("login button not found");  
-            }
+    const AUTO_SUBMIT = true;
+
+    function clickIfExists(selector, label) {
+        const el = document.querySelector(selector);
+        if (el) {
+            el.click();
+            console.log('clicked:', label);
+            return true;
         }
-        clickLogin();
+        console.log('not found:', label);
+        return false;
     }
-    if (location.pathname.startsWith('/f/wlxt/index/course/student')) {
-        const clickRelogin = () => {
-            const relogin = document.querySelector('a.chongxin');
-            if (relogin) relogin.click();
-        };
-        clickRelogin();
+
+    function findCredFields() {
+        const user = document.querySelector('#username, input[name="username"], input[id*="user" i]');
+        const pass = document.querySelector('input[type="password"], input[name="password"], input[id*="pass" i]');
+        return (user && pass) ? { user, pass } : null;
     }
-    if (location.pathname.startsWith('/do/off/ui/auth/login/form/')){
-        chrome.storage.sync.get('thuLogin').then(({ thuLogin }) => {
-            if (!thuLogin) return false;
-            const { username = '', password = '', autoSubmit = true } = thuLogin;
-            if (!username || !password) return false;
-            const user = document.querySelector('#username, input[name="username"], input[id*="user" i]');
-            const pass = document.querySelector('input[type="password"], input[name="password"], input[id*="pass" i]');
-            if (!user || !pass) return false;
-            user.value = username;
-            pass.value = password;
-            // Light event dispatch so frameworks notice
-            user.dispatchEvent(new Event('input', { bubbles: true }));
-            pass.dispatchEvent(new Event('input', { bubbles: true }));
-            if (autoSubmit) {
-                const form = pass.form || user.form || document.querySelector('form');
-                const btn = form?.querySelector('button[type="submit"], input[type="submit"]');
-                if (btn) btn.click();
-                else form?.submit?.();
+
+    function fieldsFilled({ user, pass }) {
+        return Boolean(user.value && pass.value);
+    }
+
+    function fingerprintReady() {
+        const fp = document.getElementById('fingerPrint');
+        return !fp || Boolean(fp.value);
+    }
+
+    function trySubmit({ user, pass }) {
+        if (!fieldsFilled({ user, pass })) return false;
+        if (!fingerprintReady()) return false;
+
+        // Prefer doLogin buttons/anchors if present
+        const doLoginBtn = document.querySelector(
+            'a[onclick*="doLogin"], button[onclick*="doLogin"], input[onclick*="doLogin"]'
+        );
+        if (doLoginBtn) {
+            doLoginBtn.click();
+            console.log('clicked doLogin element');
+            return true;
+        }
+
+        // Fallback to normal submit
+        const form = pass.form || user.form || document.querySelector('form');
+        const submitBtn = form?.querySelector('button[type="submit"], input[type="submit"]');
+        if (submitBtn) {
+            submitBtn.click();
+            console.log('clicked submit button');
+            return true;
+        }
+        if (form?.submit) {
+            form.submit();
+            console.log('submitted form');
+            return true;
+        }
+        return false;
+    }
+
+    // --- route handling ---
+    const path = location.pathname;
+
+    if (path.startsWith('/f/login')) {
+        console.log('on /f/login');
+        clickIfExists('#loginButtonId', 'loginButtonId');
+        return;
+    }
+
+    if (path.startsWith('/f/wlxt/index/course/student')) {
+        console.log('on /wlxt student');
+        clickIfExists('a.chongxin', 'relogin link');
+        return;
+    }
+
+    if (path.startsWith('/do/off/ui/auth/login/form/')) {
+        console.log('on tsinghua id login form');
+
+        if (!AUTO_SUBMIT) return;
+
+        const fields = findCredFields();
+        if (fields && trySubmit(fields)) return;
+
+        // Watch for autofill / fingerprint becoming ready
+        let attempts = 50; // 10s (50 * 200ms)
+        const timer = setInterval(() => {
+            const f = findCredFields();
+            if (f && trySubmit(f)) clearInterval(timer);
+            else if (--attempts <= 0) clearInterval(timer);
+        }, 200);
+
+        const obs = new MutationObserver(() => {
+            const f = findCredFields();
+            if (f && trySubmit(f)) {
+                clearInterval(timer);
+                obs.disconnect();
             }
         });
+        obs.observe(document.documentElement, { childList: true, subtree: true });
 
+        return;
     }
 })();
