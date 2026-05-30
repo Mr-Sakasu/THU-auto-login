@@ -1,0 +1,23 @@
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local package/build outputs
+dist/
+build/
+*.zip
+*.crx
+*.pem
+
+# Local environment or secrets
+.env
+.env.*
+*.local
