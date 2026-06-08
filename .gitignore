@@ -11,13 +11,26 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # Local package/build outputs
+node_modules/
 dist/
 build/
+coverage/
+.cache/
+tmp/
 *.zip
 *.crx
 *.pem
+*.key
+*.tsbuildinfo
 
 # Local environment or secrets
 .env
 .env.*
+!.env.example
+!**/.env.example
 *.local
+client_secret*.json
+credentials*.json
+token*.json
+oauth*.json
+secrets/
